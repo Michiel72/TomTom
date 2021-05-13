@@ -2,11 +2,72 @@ import React, { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl'; // eslint-disable-line import/no-webpack-loader-syntax
 import './App.css';
 
+const windowWidth = 500;
+const windowHeight = 400;
+const pointSize = 40;
+const intendedLowerLeft = { longitude: -0.27603, latitude: 51.0904 };
+const intendedTopRight = { longitude: 0.05081, latitude: 51.6836 };
+
+const middleLngLat = {
+  longitude: (intendedLowerLeft.longitude + intendedTopRight.longitude) / 2,
+  latitude: (intendedLowerLeft.latitude + intendedTopRight.latitude) / 2,
+};
+
+const convertXCoordinateToLongitude = (xCoordinate) => {
+  const longitude = 360 * xCoordinate - 180;
+  return longitude;
+};
+
+const convertYCoordinateToLatitude = (yCoordinate) => {
+  const latitude = (360 / Math.PI) * (Math.atan(Math.E ** (Math.PI - 2 * Math.PI * yCoordinate)) - 0.25 * Math.PI);
+  return latitude;
+};
+
 const convertLngLatToCoordinates = ({ longitude, latitude }) => {
   const xCoordinate = 0.5 + longitude / 360;
   const yCoordinate = (Math.PI - Math.log(Math.tan(Math.PI / 4 + (latitude / 360) * Math.PI))) / (2 * Math.PI);
   return { xCoordinate, yCoordinate };
 };
+
+const calculateZoomLevel = (xDifference) => Math.log2(1 / xDifference);
+
+const determineMinimalDistanceAndLngLatBorders = (mapLL, mapTR, width, height) => {
+  const middleCoordinates = convertLngLatToCoordinates(middleLngLat);
+  const lowerLeft = convertLngLatToCoordinates(mapLL);
+  const topRight = convertLngLatToCoordinates(mapTR);
+  const horizontalPixelRatio = (topRight.xCoordinate - lowerLeft.xCoordinate) / width;
+  const verticalPixelRatio = (topRight.yCoordinate - lowerLeft.yCoordinate) / height;
+  if (horizontalPixelRatio > verticalPixelRatio) {
+    const newVerticalSize = horizontalPixelRatio * windowHeight;
+    const newLowerLeftYCoordinate = middleCoordinates.yCoordinate + newVerticalSize / 2;
+    const newTopRightYCoordinate = middleCoordinates.yCoordinate - newVerticalSize / 2;
+    return {
+      minimalDistance: horizontalPixelRatio * pointSize,
+      lowerLeft: { longitude: mapLL.longitude, latitude: convertYCoordinateToLatitude(newLowerLeftYCoordinate) },
+      topRight: { longitude: mapTR.longitude, latitude: convertYCoordinateToLatitude(newTopRightYCoordinate) },
+    };
+  }
+  const newHorizontalSize = verticalPixelRatio * width;
+  const newLowerLeftXCoordinate = middleCoordinates.xCoordinate - newHorizontalSize / 2;
+  const newTopRightXCoordinate = middleCoordinates.xCoordinate + newHorizontalSize / 2;
+  return {
+    minimalDistance: verticalPixelRatio * pointSize,
+    lowerLeft: { longitude: convertXCoordinateToLongitude(newLowerLeftXCoordinate), latitude: mapLL.latitude },
+    topRight: { longitude: convertXCoordinateToLongitude(newTopRightXCoordinate), latitude: mapTR.latitude },
+  };
+};
+
+const initialViewValues = determineMinimalDistanceAndLngLatBorders(
+  intendedLowerLeft,
+  intendedTopRight,
+  windowWidth,
+  windowHeight
+);
+const recalculatedLowerLeftCoordinates = convertLngLatToCoordinates(initialViewValues.lowerLeft);
+const recalculatedTopRightCoordinates = convertLngLatToCoordinates(initialViewValues.topRight);
+const zoomLevel = calculateZoomLevel(
+  recalculatedTopRightCoordinates.xCoordinate - recalculatedLowerLeftCoordinates.xCoordinate
+);
 
 const addPointToAlreadyExistingPoint = (existingPoint, overlappingPoint) => ({
   ...existingPoint,
@@ -72,19 +133,11 @@ const addPoints = (data, mapInstance) => {
 mapboxgl.accessToken =
   'pk.eyJ1IjoibWljaGllbHZhbmRvb3JuIiwiYSI6ImNrb2xidjJlYzFkMzAycHJtYXZ0NGNqY2gifQ.FvS9mWASBY2X7kNimPVTbA';
 
-const determineLngLatBorders = (longitude, latitude, zoomLevel) => {
-  const middleCoordinates = convertLngLatToCoordinates({ longitude, latitude });
-  const viewPort = 1 / 2 ** zoomLevel;
-  const leftX = middleCoordinates.xCoordinate - viewPort / 2;
-  const rightX = middleCoordinates.xCoordinate + viewPort / 2;
-  const upperLeft = middleCoordinates;
-};
-
-const App = (zoomLevel, lngMiddle, latMiddle) => {
+const App = () => {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const [lng, setLng] = useState(lngMiddle);
-  const [lat, setLat] = useState(latMiddle);
+  const [lng, setLng] = useState(middleLngLat.longitude);
+  const [lat, setLat] = useState(middleLngLat.latitude);
   const [zoom, setZoom] = useState(zoomLevel);
   const [dataPoints, setDataPoints] = useState([]);
 
