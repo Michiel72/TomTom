@@ -28,7 +28,7 @@ const convertLngLatToCoordinates = ({ longitude, latitude }) => {
   return { xCoordinate, yCoordinate };
 };
 
-const calculateZoomLevel = (xDifference) => Math.log2(1 / xDifference);
+const calculateZoomLevel = (difference) => Math.log2(1 / difference);
 
 const determineMinimalDistanceAndLngLatBorders = (mapLL, mapTR, width, height) => {
   const middleCoordinates = convertLngLatToCoordinates(middleLngLat);
@@ -65,7 +65,10 @@ const initialViewValues = determineMinimalDistanceAndLngLatBorders(
 const recalculatedLowerLeftCoordinates = convertLngLatToCoordinates(initialViewValues.lowerLeft);
 const recalculatedTopRightCoordinates = convertLngLatToCoordinates(initialViewValues.topRight);
 const zoomLevel = calculateZoomLevel(
-  recalculatedTopRightCoordinates.xCoordinate - recalculatedLowerLeftCoordinates.xCoordinate
+  Math.max(
+    recalculatedTopRightCoordinates.xCoordinate - recalculatedLowerLeftCoordinates.xCoordinate,
+    recalculatedLowerLeftCoordinates.yCoordinate - recalculatedTopRightCoordinates.yCoordinate
+  )
 );
 
 const addPointToAlreadyExistingPoint = (existingPoint, overlappingPoint) => ({
