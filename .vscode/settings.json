@@ -1,0 +1,19 @@
+{
+  "cSpell.words": [
+    "Accountbar",
+    "Onboarded",
+    "antialiased",
+    "getjwt",
+    "infinitas",
+    "mapbox",
+    "mapboxgl"
+  ],
+  "files.autoSave": "onFocusChange",
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
+  "eslint.validate": [
+    "javascript",
+    "typescript"
+  ],
+  "eslint.format.enable": true
+}
