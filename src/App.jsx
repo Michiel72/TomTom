@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl'; // eslint-disable-line import/no-webpack-loader-syntax
-import './App.css';
 
 const windowWidth = 500;
 const windowHeight = 400;
